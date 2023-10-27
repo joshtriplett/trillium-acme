@@ -5,7 +5,7 @@ authors = ["Josh Triplett <josh@joshtriplett.org>"]
 edition = "2021"
 description = "Automatic HTTPS certificates for trillium.rs, via Let's Encrypt and ACME tls-alpn-01 challenges"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/trillium-rs/trillium"
+repository = "https://github.com/joshtriplett/trillium-acme"
 keywords = ["trillium", "acme", "autocert", "https", "tls"]
 categories = ["web-programming::http-server", "web-programming"]
 
