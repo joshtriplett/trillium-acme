@@ -1,0 +1,16 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+    - run: cargo fmt --all --check
+    - run: sudo apt-get install pebble
+    - run: cargo test --all-targets
+    - run: cargo clippy --all-targets
