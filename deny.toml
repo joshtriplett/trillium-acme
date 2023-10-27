@@ -1,0 +1,26 @@
+[licenses]
+unlicensed = "deny"
+allow = [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+]
+default = "deny"
+confidence-threshold = 0.8
+exceptions = [
+    { allow = ["OpenSSL"], name = "ring" },
+]
+
+private = { ignore = true }
+
+[[licenses.clarify]]
+name = "ring"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 }
+]
