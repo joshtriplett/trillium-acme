@@ -1656,7 +1656,7 @@ name = "trillium-acme"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "futures-lite 1.13.0",
+ "futures-lite 2.0.0",
  "rustls-acme",
  "rustls-pemfile",
  "smol",

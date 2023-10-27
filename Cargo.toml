@@ -10,7 +10,7 @@ keywords = ["trillium", "acme", "autocert", "https", "tls"]
 categories = ["web-programming::http-server", "web-programming"]
 
 [dependencies]
-futures-lite = "1.13.0"
+futures-lite = "2.0.0"
 rustls-acme = "0.7.7"
 trillium = "0.2.11"
 trillium-server-common = "0.4.5"
