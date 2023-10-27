@@ -194,7 +194,8 @@ fn test_with_pebble() -> anyhow::Result<()> {
     .context("waiting for rustls-acme to store signed certificate in cache")?;
     println!("Certificate challenge complete");
 
-    let client_config = pem_to_client_config(pebble_root).context("creating client config for trillium-acme server")?;
+    let client_config = pem_to_client_config(pebble_root)
+        .context("creating client config for trillium-acme server")?;
     let client = trillium_client::client(trillium_rustls::RustlsConfig::new(
         client_config,
         TestTcpConnector("localhost".to_string(), 5001),
