@@ -1,6 +1,6 @@
 [package]
 name = "trillium-acme"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Josh Triplett <josh@joshtriplett.org>"]
 edition = "2021"
 description = "Automatic HTTPS certificates for trillium.rs, via Let's Encrypt and ACME tls-alpn-01 challenges"
