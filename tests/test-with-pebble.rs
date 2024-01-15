@@ -8,9 +8,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context};
 use trillium_acme::rustls_acme::caches::DirCache;
-use trillium_acme::rustls_acme::futures_rustls::rustls::{
-    Certificate, ClientConfig, RootCertStore,
-};
+use trillium_acme::rustls_acme::futures_rustls::rustls::{ClientConfig, RootCertStore};
 use trillium_acme::AcmeConfig;
 
 // Retry the provided function until it returns true or 15 seconds have passed. If the latter,
@@ -41,17 +39,15 @@ fn on_drop(f: impl FnOnce() + 'static) -> OnDrop {
 }
 
 fn pem_to_client_config(pem: Vec<u8>) -> anyhow::Result<ClientConfig> {
-    let mut roots =
-        rustls_pemfile::certs(&mut pem.as_slice()).context("root certificate parsing")?;
+    let mut roots = rustls_pemfile::certs(&mut pem.as_slice())
+        .collect::<Result<Vec<_>, _>>()
+        .context("root certificate parsing")?;
     let root = roots.pop().context("root certificate")?;
     assert!(roots.is_empty());
 
     let mut root_store = RootCertStore::empty();
-    root_store
-        .add(&Certificate(root))
-        .context("root certificate")?;
+    root_store.add(root).context("root certificate")?;
     Ok(ClientConfig::builder()
-        .with_safe_defaults()
         .with_root_certificates(root_store)
         .with_no_client_auth())
 }
