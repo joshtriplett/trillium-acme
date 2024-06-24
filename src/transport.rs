@@ -82,28 +82,28 @@ impl<Input> trillium_server_common::Transport for Transport<Input>
 where
     Input: trillium_server_common::Transport,
 {
-    fn set_ip_ttl(&mut self, ttl: u32) -> std::io::Result<()> {
+    fn set_ip_ttl(&mut self, ttl: u32) -> io::Result<()> {
         match self.0 {
             None => Ok(()),
             Some(ref mut tls) => Ok(tls.get_mut().0.set_ip_ttl(ttl)?),
         }
     }
 
-    fn set_linger(&mut self, linger: Option<std::time::Duration>) -> std::io::Result<()> {
+    fn set_linger(&mut self, linger: Option<std::time::Duration>) -> io::Result<()> {
         match self.0 {
             None => Ok(()),
             Some(ref mut tls) => Ok(tls.get_mut().0.set_linger(linger)?),
         }
     }
 
-    fn set_nodelay(&mut self, nodelay: bool) -> std::io::Result<()> {
+    fn set_nodelay(&mut self, nodelay: bool) -> io::Result<()> {
         match self.0 {
             None => Ok(()),
             Some(ref mut tls) => Ok(tls.get_mut().0.set_nodelay(nodelay)?),
         }
     }
 
-    fn peer_addr(&self) -> std::io::Result<Option<std::net::SocketAddr>> {
+    fn peer_addr(&self) -> io::Result<Option<std::net::SocketAddr>> {
         match self.0 {
             None => Ok(None),
             Some(ref tls) => Ok(tls.get_ref().0.peer_addr()?),
