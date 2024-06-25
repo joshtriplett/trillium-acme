@@ -9,9 +9,14 @@ repository = "https://github.com/joshtriplett/trillium-acme"
 keywords = ["trillium", "acme", "autocert", "https", "tls"]
 categories = ["web-programming::http-server", "web-programming"]
 
+[features]
+default = ["aws-lc-rs"]
+aws-lc-rs = ["rustls-acme/aws-lc-rs"]
+ring = ["rustls-acme/ring"]
+
 [dependencies]
 futures-lite = "2.3.0"
-rustls-acme = "0.10.1"
+rustls-acme = { version = "0.10.1", default-features = false }
 trillium = "0.2.20"
 trillium-server-common = "0.5.2"
 
@@ -21,5 +26,5 @@ rustls-pemfile = "2.1.2"
 smol = "2.0.0"
 tempfile = "3.10.1"
 trillium-client = "0.6.2"
-trillium-rustls = "0.8.0"
+trillium-rustls = { version = "0.8.0", default-features = false, features = ["aws-lc-rs", "client"] }
 trillium-smol = "0.4.1"
