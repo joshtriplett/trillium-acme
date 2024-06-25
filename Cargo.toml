@@ -10,6 +10,7 @@ keywords = ["trillium", "acme", "autocert", "https", "tls"]
 categories = ["web-programming::http-server", "web-programming"]
 
 [features]
+# Use aws-lc by default to match rustls, rustls-acme, and trillium
 default = ["aws-lc-rs"]
 aws-lc-rs = ["rustls-acme/aws-lc-rs"]
 ring = ["rustls-acme/ring"]
