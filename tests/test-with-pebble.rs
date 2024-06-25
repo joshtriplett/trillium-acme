@@ -6,9 +6,9 @@ use std::process::Command;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use anyhow::{bail, Context};
+use anyhow::{anyhow, bail, Context};
 use trillium_acme::rustls_acme::caches::DirCache;
-use trillium_acme::rustls_acme::futures_rustls::rustls::{ClientConfig, RootCertStore};
+use trillium_acme::rustls_acme::futures_rustls::rustls::{self, ClientConfig, RootCertStore};
 use trillium_acme::AcmeConfig;
 
 // Retry the provided function until it returns true or 15 seconds have passed. If the latter,
@@ -78,6 +78,10 @@ impl trillium_client::Connector for TestTcpConnector {
 
 #[test]
 fn test_with_pebble() -> anyhow::Result<()> {
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .map_err(|_| anyhow!("Failed to install default crypto provider"))?;
+
     let tempdir = tempfile::tempdir()?;
 
     let log_path = tempdir.path().join("pebble-challtestsrv.log");
