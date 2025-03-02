@@ -93,6 +93,8 @@ fn test_with_pebble() -> anyhow::Result<()> {
             "",
             "-tlsalpn01",
             "",
+            "-doh",
+            "",
             "-dns01",
             "127.0.0.1:8053",
             "-management",
