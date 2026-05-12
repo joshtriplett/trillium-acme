@@ -109,4 +109,8 @@ where
             Some(ref tls) => Ok(tls.get_ref().0.peer_addr()?),
         }
     }
+
+    fn negotiated_alpn(&self) -> Option<std::borrow::Cow<'_, [u8]>> {
+        self.0.as_ref()?.get_ref().0.negotiated_alpn()
+    }
 }

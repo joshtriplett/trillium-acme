@@ -55,8 +55,9 @@ fn pem_to_client_config(pem: Vec<u8>) -> anyhow::Result<ClientConfig> {
 /// A TCP connector that always connects to the same place, for testing
 struct TestTcpConnector(String, u16);
 
-#[trillium::async_trait]
-impl trillium_client::Connector for TestTcpConnector {
+impl trillium_server_common::Connector for TestTcpConnector {
+    type Udp = ();
+    type Runtime = trillium_smol::SmolRuntime;
     type Transport = <trillium_smol::ClientConfig as trillium_client::Connector>::Transport;
     async fn connect(&self, url: &trillium_server_common::Url) -> std::io::Result<Self::Transport> {
         let mut url = url.clone();
@@ -69,10 +70,13 @@ impl trillium_client::Connector for TestTcpConnector {
             .connect(&url)
             .await
     }
-    fn spawn<Fut: std::future::Future<Output = ()> + Send + 'static>(&self, fut: Fut) {
-        trillium_smol::ClientConfig::new()
-            .with_nodelay(true)
-            .spawn(fut)
+
+    async fn resolve(&self, host: &str, port: u16) -> std::io::Result<Vec<std::net::SocketAddr>> {
+        Ok(vec![format!("{host}:{port}").parse().unwrap()])
+    }
+
+    fn runtime(&self) -> Self::Runtime {
+        trillium_smol::SmolRuntime::default()
     }
 }
 
@@ -164,18 +168,16 @@ fn test_with_pebble() -> anyhow::Result<()> {
         .cache(DirCache::new(acme_cache_path.clone()));
 
     let (acceptor, future) = trillium_acme::new(config);
-    let stopper = trillium_smol::Stopper::new();
-    let future = stopper.stop_future(future);
-    trillium_smol::spawn(async {
-        future.await;
-    });
+
     const HELLO: &str = "Hello TLS!";
-    trillium_smol::config()
+    let server_handle = trillium_smol::config()
         .with_port(5001)
         .with_nodelay()
         .with_acceptor(acceptor)
-        .with_stopper(stopper)
         .spawn(|conn: trillium::Conn| async move { conn.ok(HELLO) });
+
+    let future = server_handle.swansong().interrupt(future);
+    server_handle.runtime().spawn(future);
 
     retry_loop(|| match std::fs::read_dir(&acme_cache_path) {
         Ok(dir) => Ok(dir
@@ -219,5 +221,6 @@ fn test_with_pebble() -> anyhow::Result<()> {
     assert_eq!(response, HELLO);
     println!("Got expected response from trillium-acme server");
 
+    server_handle.shut_down().block();
     Ok(())
 }

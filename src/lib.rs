@@ -3,7 +3,7 @@
 //!
 //! To use `trillium-acme`, create an [`AcmeConfig`] to configure the certificate you want, then
 //! call [`trillium_acme::new`] to create an [`Acceptor`] and a future. Spawn the future using the
-//! same stopper as the server, then pass the [`Acceptor`] to the server configuration:
+//! same swansong as the server, then pass the [`Acceptor`] to the server configuration:
 //!
 //! ```rust,no_run
 //! use trillium_acme::AcmeConfig;
@@ -14,20 +14,18 @@
 //!     .cache(DirCache::new("/srv/example/acme-cache-dir"));
 //!
 //! let (acceptor, future) = trillium_acme::new(config);
-//! let stopper = trillium_smol::Stopper::new();
-//! let future = stopper.stop_future(future);
-//! trillium_smol::spawn(async {
-//!     future.await;
-//! });
-//! trillium_smol::config()
+//! let server_handle = trillium_smol::config()
 //!     .with_port(443)
 //!     .with_host("0.0.0.0")
 //!     .with_nodelay()
 //!     .with_acceptor(acceptor)
-//!     .with_stopper(stopper)
-//!     .run(|conn: trillium::Conn| async move {
+//!     .spawn(|conn: trillium::Conn| async move {
 //!        conn.ok("Hello TLS!")
 //!     });
+//! let future = server_handle.swansong().interrupt(future);
+//! server_handle.runtime().spawn(future);
+//!
+//! server_handle.block(); // or .await
 //! ```
 //!
 //! This will configure the TLS stack to obtain a certificate for the domain `domain.example`,
@@ -71,9 +69,14 @@ use std::future::Future;
 use std::sync::Arc;
 
 use futures_lite::{AsyncWriteExt, StreamExt};
-use rustls_acme::futures_rustls::{rustls::ServerConfig, LazyConfigAcceptor};
+use rustls_acme::{
+    futures_rustls::{
+        rustls::{server::ResolvesServerCert, ServerConfig},
+        LazyConfigAcceptor,
+    },
+    AcmeState,
+};
 use trillium::log::{error, info};
-use trillium_server_common::async_trait;
 
 pub use rustls_acme::{self, AcmeConfig};
 
@@ -88,36 +91,79 @@ pub use transport::Transport;
 pub struct Acceptor {
     challenge_server_config: Arc<ServerConfig>,
     default_server_config: Arc<ServerConfig>,
+    resolver: Arc<dyn ResolvesServerCert>,
+}
+
+impl Acceptor {
+    /// Returns the ACME-managed certificate resolver. The same resolver is used internally for
+    /// regular TLS connections; sharing it allows building additional `rustls::ServerConfig`s
+    /// (e.g. for QUIC/HTTP/3 via `trillium_quinn::QuicConfig::from_cert_resolver`) that serve
+    /// the same ACME-managed certificate.
+    pub fn resolver(&self) -> Arc<dyn ResolvesServerCert> {
+        self.resolver.clone()
+    }
+}
+
+/// A future that drives the ACME process
+#[derive(Debug)]
+pub struct AcmeFuture<EC: 'static + Debug, EA: 'static + Debug>(AcmeState<EC, EA>);
+impl<EC: 'static + Debug, EA: 'static + Debug> Future for AcmeFuture<EC, EA> {
+    type Output = ();
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        loop {
+            match std::task::ready!(self.0.poll_next(cx)) {
+                Some(Ok(ok)) => info!("ACME event: {:?}", ok),
+                Some(Err(err)) => error!("ACME error: {:?}", err),
+                None => return std::task::Poll::Ready(()),
+            }
+        }
+    }
 }
 
 /// Create a new [`Acceptor`] to pass to [`trillium_server_common::Config::with_acceptor`], and a
 /// new future that must be spawned detached in the background.
+///
+/// The acceptor advertises `h2` and `http/1.1` via ALPN. Use [`new_without_h2`] for
+/// `http/1.1`-only advertisement.
 pub fn new<EC: 'static + Debug, EA: 'static + Debug>(
     config: AcmeConfig<EC, EA>,
-) -> (Acceptor, impl Future) {
-    let mut state = config.state();
-    let challenge_server_config = state.challenge_rustls_config();
-    let default_server_config = state.default_rustls_config();
+) -> (Acceptor, AcmeFuture<EC, EA>) {
+    new_with_alpn(config, vec![b"h2".to_vec(), b"http/1.1".to_vec()])
+}
 
-    let future = async move {
-        loop {
-            match state.next().await.unwrap() {
-                Ok(ok) => info!("ACME event: {:?}", ok),
-                Err(err) => error!("ACME error: {:?}", err),
-            }
-        }
-    };
+/// Like [`new`], but advertises only `http/1.1` via ALPN, opting out of HTTP/2.
+pub fn new_without_h2<EC: 'static + Debug, EA: 'static + Debug>(
+    config: AcmeConfig<EC, EA>,
+) -> (Acceptor, AcmeFuture<EC, EA>) {
+    new_with_alpn(config, vec![b"http/1.1".to_vec()])
+}
+
+fn new_with_alpn<EC: 'static + Debug, EA: 'static + Debug>(
+    config: AcmeConfig<EC, EA>,
+    alpn_protocols: Vec<Vec<u8>>,
+) -> (Acceptor, AcmeFuture<EC, EA>) {
+    let state = config.state();
+    let resolver = state.resolver();
+    let challenge_server_config = state.challenge_rustls_config();
+    let mut default_server_config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_cert_resolver(resolver.clone());
+    default_server_config.alpn_protocols = alpn_protocols;
+    let default_server_config = Arc::new(default_server_config);
 
     (
         Acceptor {
             challenge_server_config,
             default_server_config,
+            resolver,
         },
-        future,
+        AcmeFuture(state),
     )
 }
 
-#[async_trait]
 impl<Input> trillium_server_common::Acceptor<Input> for Acceptor
 where
     Input: trillium_server_common::Transport,
