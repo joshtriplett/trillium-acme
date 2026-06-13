@@ -99,7 +99,7 @@ fn test_with_pebble() -> anyhow::Result<()> {
             "",
             "-doh",
             "",
-            "-dns01",
+            "-dnsserver",
             "127.0.0.1:8053",
             "-management",
             "127.0.0.1:8055",
@@ -109,7 +109,7 @@ fn test_with_pebble() -> anyhow::Result<()> {
     retry_loop(|| {
         Ok(std::fs::read_to_string(&log_path)
             .context("reading pebble-challtestsrv log")?
-            .contains("Creating TCP and UDP DNS-01 challenge server on 127.0.0.1:8053"))
+            .contains("Creating TCP and UDP DNS server on 127.0.0.1:8053"))
     })
     .context("waiting for pebble-challtestsrv")?;
     let _exit_challtestsrv = on_drop(move || child.kill().expect("kill pebble-challtestsrv"));

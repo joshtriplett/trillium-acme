@@ -18,8 +18,8 @@ webpki-roots = ["rustls-acme/webpki-roots"]
 
 [dependencies]
 futures-lite = "2.6.1"
-rustls-acme = { version = "0.15.1", default-features = false }
-trillium = "1.1"
+rustls-acme = { version = "0.15.3", default-features = false }
+trillium = "1.3"
 trillium-server-common = "0.7"
 
 [dev-dependencies]
@@ -27,8 +27,8 @@ anyhow = "1.0.102"
 rustls-pemfile = "2.2"
 smol = "2.0.2"
 tempfile = "3.27.0"
-trillium-client = "0.8"
-trillium-quinn = "0.1.3"
+trillium-client = "0.9"
+trillium-quinn = "0.1.4"
 trillium-rustls = { version = "0.11", default-features = false, features = ["aws-lc-rs", "client"] }
 trillium-smol = "0.6"
 trillium-acme = { path = ".", features = ["webpki-roots"] }

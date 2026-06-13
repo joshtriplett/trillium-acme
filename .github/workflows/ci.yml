@@ -10,15 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: Swatinem/rust-cache@v2
-    - uses: actions/setup-go@v5
-      with:
-        go-version: stable
-    # Pin to pebble v2.9.0: v2.10.0 added unconditional User-Agent enforcement
-    # (letsencrypt/pebble#530) which rustls-acme does not yet satisfy.
-    - run: |
-        go install github.com/letsencrypt/pebble/v2/cmd/pebble@v2.9.0
-        go install github.com/letsencrypt/pebble/v2/cmd/pebble-challtestsrv@v2.9.0
-        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
     - run: cargo fmt --all --check
+    - run: sudo apt-get install pebble
     - run: cargo test --all-targets
     - run: cargo clippy --all-targets
