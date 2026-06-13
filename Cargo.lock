@@ -1943,7 +1943,7 @@ dependencies = [
  "anyhow",
  "futures-lite",
  "rustls-acme",
- "rustls-pemfile",
+ "rustls-pki-types",
  "smol",
  "tempfile",
  "trillium",

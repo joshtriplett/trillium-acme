@@ -38,8 +38,9 @@ fn on_drop(f: impl FnOnce() + 'static) -> OnDrop {
     OnDrop(Some(Box::new(f)))
 }
 
-fn pem_to_client_config(pem: Vec<u8>) -> anyhow::Result<ClientConfig> {
-    let mut roots = rustls_pemfile::certs(&mut pem.as_slice())
+fn pem_to_client_config(r: impl std::io::Read) -> anyhow::Result<ClientConfig> {
+    use rustls_pki_types::pem::PemObject;
+    let mut roots = rustls_pki_types::CertificateDer::pem_reader_iter(r)
         .collect::<Result<Vec<_>, _>>()
         .context("root certificate parsing")?;
     let root = roots.pop().context("root certificate")?;
@@ -136,7 +137,7 @@ fn test_with_pebble() -> anyhow::Result<()> {
     println!("pebble started");
 
     let pebble_client_config = pem_to_client_config(
-        std::fs::read("tests/test-with-pebble/pebble.minica.pem")
+        File::open("tests/test-with-pebble/pebble.minica.pem")
             .context("reading pebble dir root certificate file")?,
     )
     .context("creating client config for pebble")?;
@@ -198,7 +199,7 @@ fn test_with_pebble() -> anyhow::Result<()> {
     .context("waiting for rustls-acme to store signed certificate in cache")?;
     println!("Certificate challenge complete");
 
-    let client_config = pem_to_client_config(pebble_root)
+    let client_config = pem_to_client_config(std::io::Cursor::new(pebble_root))
         .context("creating client config for trillium-acme server")?;
     let client = trillium_client::client(trillium_rustls::RustlsConfig::new(
         client_config,
